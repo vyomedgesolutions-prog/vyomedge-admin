@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { getBlog, createBlog, updateBlog } from "../services/api";
 import toast from "react-hot-toast";
@@ -21,13 +22,172 @@ const CATEGORIES = [
   "Case Study",
 ];
 
+// ── Custom Select Component ───────────────────────────────────────────────────
+// Renders the dropdown via a React Portal directly into document.body,
+// so it's never clipped by overflow:hidden on any ancestor card.
+function CustomSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const triggerRef = useRef(null);
+  const listRef = useRef(null);
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+    } else {
+      if (triggerRef.current) {
+        setRect(triggerRef.current.getBoundingClientRect());
+      }
+      setOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (
+        triggerRef.current?.contains(e.target) ||
+        listRef.current?.contains(e.target)
+      )
+        return;
+      setOpen(false);
+    };
+    const closeOnScroll = () => setOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("scroll", closeOnScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("scroll", closeOnScroll, true);
+    };
+  }, [open]);
+
+  const selected = options.find((o) =>
+    typeof o === "string" ? o === value : o.value === value,
+  );
+  const label = selected
+    ? typeof selected === "string"
+      ? selected
+      : selected.label
+    : null;
+
+  const dropdown =
+    open &&
+    rect &&
+    createPortal(
+      <ul
+        ref={listRef}
+        style={{
+          position: "fixed",
+          top: rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+          zIndex: 99999,
+          background: "#16161f",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+        }}
+      >
+        {placeholder && (
+          <li
+            style={{
+              padding: "10px 16px",
+              fontSize: "0.875rem",
+              color: "#6b7280",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
+            }
+            onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+          >
+            {placeholder}
+          </li>
+        )}
+        {options.map((opt) => {
+          const val = typeof opt === "string" ? opt : opt.value;
+          const lbl = typeof opt === "string" ? opt : opt.label;
+          const isActive = val === value;
+          return (
+            <li
+              key={val}
+              onClick={() => {
+                onChange(val);
+                setOpen(false);
+              }}
+              style={{
+                padding: "10px 16px",
+                fontSize: "0.875rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                color: isActive ? "#fff" : "#d1d5db",
+                background: isActive
+                  ? "rgba(var(--color-primary-rgb, 139,92,246),0.2)"
+                  : "",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive)
+                  e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.background = "";
+              }}
+            >
+              {lbl}
+              {isActive && (
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "var(--color-primary, #8b5cf6)",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ul>,
+      document.body,
+    );
+
+  return (
+    <div className="relative w-full">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all text-left"
+      >
+        <span style={{ color: label ? "#fff" : "#6b7280" }}>
+          {label ?? placeholder ?? "Select…"}
+        </span>
+        <HiChevronDown
+          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {dropdown}
+    </div>
+  );
+}
+
 // ── FAQ Item Component ────────────────────────────────────────────────────────
 function FaqItem({ faq, index, onChange, onRemove }) {
   const [open, setOpen] = useState(true);
 
   return (
     <div className="border border-white/10 rounded-xl overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white/5">
         <button
           type="button"
@@ -53,7 +213,6 @@ function FaqItem({ faq, index, onChange, onRemove }) {
         </button>
       </div>
 
-      {/* Body */}
       {open && (
         <div className="p-4 space-y-3">
           <div>
@@ -100,9 +259,7 @@ export default function BlogForm() {
   const [fetching, setFetching] = useState(isEdit);
   const [content, setContent] = useState("");
   const [imageConverting, setImageConverting] = useState(false);
-  const [initialData, setInitialData] = useState(null); // for change detection
-
-  // ── FAQs state: array of { question, answer } ──
+  const [initialData, setInitialData] = useState(null);
   const [faqs, setFaqs] = useState([]);
 
   const [form, setForm] = useState({
@@ -120,7 +277,6 @@ export default function BlogForm() {
     scheduledAt: "",
   });
 
-  /* ── post HTML into the iframe editor ── */
   const postEditorData = useCallback(
     (html) => {
       if (
@@ -129,14 +285,10 @@ export default function BlogForm() {
         !editorRef.current?.contentWindow
       )
         return false;
-
       editorRef.current.contentWindow.postMessage(
         {
           type: "custom-text-editor:set-data",
-          payload: {
-            title: "Edited From Parent Website",
-            html: html,
-          },
+          payload: { title: "Edited From Parent Website", html },
         },
         "*",
       );
@@ -153,21 +305,16 @@ export default function BlogForm() {
   const scheduleEditorDataPost = useCallback(
     (html, place) => {
       if (html === undefined || html === null) return;
-
       clearScheduledPosts();
       postEditorData(html, `${place}:immediate`);
-
       [250].forEach((delay) => {
-        const timeoutId = setTimeout(() => {
-          postEditorData(html);
-        }, delay);
+        const timeoutId = setTimeout(() => postEditorData(html), delay);
         postRetryTimeoutsRef.current.push(timeoutId);
       });
     },
     [clearScheduledPosts, postEditorData],
   );
 
-  /* ── listen for content updates from the iframe ── */
   useEffect(() => {
     const handler = (e) => {
       if (!e.data || typeof e.data !== "object") return;
@@ -183,16 +330,13 @@ export default function BlogForm() {
 
   useEffect(() => {
     if (initialData?.content === undefined) return;
-
     pendingContentRef.current = initialData.content;
-
     if (editorReady) {
       scheduleEditorDataPost(initialData.content, "initial-data-effect");
       pendingContentRef.current = null;
     }
   }, [initialData?.content, editorReady, scheduleEditorDataPost]);
 
-  /* ── when editor becomes ready, flush any pending content ── */
   useEffect(() => {
     if (editorReady && pendingContentRef.current) {
       scheduleEditorDataPost(
@@ -203,7 +347,6 @@ export default function BlogForm() {
     }
   }, [editorReady, scheduleEditorDataPost]);
 
-  /* ── fetch existing blog in edit mode ── */
   useEffect(() => {
     if (!isEdit) return;
     getBlog(id)
@@ -228,15 +371,12 @@ export default function BlogForm() {
         setInitialData(blog);
         if (editorReady) scheduleEditorDataPost(html, "fetch-blog");
         else pendingContentRef.current = html;
-
-        // load saved FAQs
         if (Array.isArray(blog.faqs)) setFaqs(blog.faqs);
       })
       .catch(() => toast.error("Failed to fetch blog"))
       .finally(() => setFetching(false));
   }, [id, isEdit, editorReady, scheduleEditorDataPost]);
 
-  /* ── convert File to base64 data-URL ── */
   const fileToBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -245,7 +385,6 @@ export default function BlogForm() {
       reader.readAsDataURL(file);
     });
 
-  /* ── handle image file upload → base64 ── */
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -270,19 +409,15 @@ export default function BlogForm() {
     }
   };
 
-  /* ── FAQ helpers ── */
   const addFaq = () =>
     setFaqs((prev) => [...prev, { question: "", answer: "" }]);
-
   const updateFaq = (index, field, value) =>
     setFaqs((prev) =>
       prev.map((faq, i) => (i === index ? { ...faq, [field]: value } : faq)),
     );
-
   const removeFaq = (index) =>
     setFaqs((prev) => prev.filter((_, i) => i !== index));
 
-  /* ── auto-derive slug & seoTitle from title ── */
   const handleTitleChange = (val) => {
     setForm((f) => ({
       ...f,
@@ -313,7 +448,6 @@ export default function BlogForm() {
     setForm((f) => ({ ...f, slug: clean, canonicalUrl: `/blog/${clean}` }));
   };
 
-  /* ── save ── */
   const handleSave = useCallback(
     async (statusOverride) => {
       const finalStatus = statusOverride || form.status;
@@ -321,8 +455,6 @@ export default function BlogForm() {
         toast.error("Title is required");
         return;
       }
-
-      // validate FAQs — both fields must be filled if a FAQ row exists
       const invalidFaq = faqs.find(
         (f) => !f.question.trim() || !f.answer.trim(),
       );
@@ -330,13 +462,12 @@ export default function BlogForm() {
         toast.error("All FAQ questions and answers must be filled in");
         return;
       }
-
       setLoading(true);
       try {
         const payload = {
           ...form,
           content,
-          faqs, // [{ question, answer }, ...]
+          faqs,
           tags: form.tags
             .split(",")
             .map((t) => t.trim())
@@ -346,7 +477,6 @@ export default function BlogForm() {
           canonicalUrl: form.canonicalUrl || `/blog/${form.slug}`,
           scheduledAt: form.scheduledAt || undefined,
         };
-
         if (isEdit) {
           await updateBlog(id, payload);
           toast.success("Blog updated!");
@@ -367,6 +497,14 @@ export default function BlogForm() {
   const seoTitleLen = form.seoTitle.length;
   const seoDescLen = form.seoDescription.length;
   const isBase64Image = form.featuredImage?.startsWith("data:");
+
+  // Options for CustomSelect
+  const statusOptions = [
+    { value: "draft", label: "Draft" },
+    { value: "published", label: "Published" },
+    { value: "scheduled", label: "Scheduled" },
+  ];
+  const categoryOptions = CATEGORIES.map((c) => ({ value: c, label: c }));
 
   if (fetching) {
     return (
@@ -397,13 +535,6 @@ export default function BlogForm() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => postEditorData(content, "manual upload")}
-            className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-all text-sm"
-          >
-            upload
-          </button>
           <button
             type="button"
             onClick={() => navigate("/blogs")}
@@ -457,7 +588,7 @@ export default function BlogForm() {
             )}
           </div>
 
-          {/* Rich Text Editor (iframe) */}
+          {/* Rich Text Editor */}
           <div className="glass rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
@@ -507,7 +638,7 @@ export default function BlogForm() {
             </p>
           </div>
 
-          {/* ── FAQ Section ── */}
+          {/* FAQ Section */}
           <div className="glass rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -548,7 +679,6 @@ export default function BlogForm() {
                     onRemove={removeFaq}
                   />
                 ))}
-
                 <button
                   type="button"
                   onClick={addFaq}
@@ -579,17 +709,12 @@ export default function BlogForm() {
               <label className="text-xs font-medium text-gray-400 block mb-1">
                 Status
               </label>
-              <select
+              {/* ✅ Custom dark-themed dropdown replaces native <select> */}
+              <CustomSelect
                 value={form.status}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, status: e.target.value }))
-                }
-                className="w-full px-4 py-2 rounded-lg text-sm"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
+                onChange={(val) => setForm((f) => ({ ...f, status: val }))}
+                options={statusOptions}
+              />
             </div>
 
             {form.status === "scheduled" && (
@@ -612,20 +737,13 @@ export default function BlogForm() {
               <label className="text-xs font-medium text-gray-400 block mb-1">
                 Category
               </label>
-              <select
+              {/* ✅ Custom dark-themed dropdown replaces native <select> */}
+              <CustomSelect
                 value={form.category}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, category: e.target.value }))
-                }
-                className="w-full px-4 py-2 rounded-lg text-sm"
-              >
-                <option value="">Select category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm((f) => ({ ...f, category: val }))}
+                options={categoryOptions}
+                placeholder="Select category"
+              />
             </div>
 
             <div>
