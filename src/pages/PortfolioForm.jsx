@@ -16,7 +16,6 @@ export default function PortfolioForm() {
     description: '',
     url:         '',
     logoUrl:     '',
-    icon:        '📁',
     color:       '#7600C4',
     tags:        '',
     da:          0,
@@ -35,8 +34,7 @@ export default function PortfolioForm() {
               client:      item.client      || '',
               description: item.description || '',
               url:         item.url         || '',
-              logoUrl:     item.logoUrl     || '',
-              icon:        item.icon        || '📁',
+              logoUrl:     item.logoUrl || item.icon || '',
               color:       item.color       || '#7600C4',
               tags:        item.tags?.join(', ') || '',
               da:          item.metrics?.da  || 0,
@@ -67,7 +65,7 @@ export default function PortfolioForm() {
       description: form.description,
       url:         form.url,
       logoUrl:     form.logoUrl,
-      icon:        form.icon,
+      icon:        form.logoUrl, // keep icon in sync for backward compat
       color:       form.color,
       tags:        form.tags.split(',').map(t => t.trim()).filter(Boolean),
       metrics:     { da: parseInt(form.da) || 0, pa: parseInt(form.pa) || 0 },
@@ -145,9 +143,9 @@ export default function PortfolioForm() {
             </div>
           </div>
 
-          {/* ── LOGO URL (new) ── */}
+          {/* Client Logo URL */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Client Logo URL</label>
+            <label className="block text-sm text-gray-400 mb-2">Client Logo</label>
             <input type="url" value={form.logoUrl}
               placeholder="https://example.com/logo.png"
               onChange={e => setForm({ ...form, logoUrl: e.target.value })}
@@ -157,29 +155,30 @@ export default function PortfolioForm() {
               <div className="mt-3 flex items-center gap-3">
                 <img src={form.logoUrl} alt="logo preview"
                   onError={e => e.target.style.display = 'none'}
-                  className="w-12 h-12 object-contain rounded-lg bg-white/10 p-1" />
-                <span className="text-xs text-gray-500">Logo preview</span>
+                  className="w-14 h-14 object-contain rounded-xl bg-white/10 p-2" />
+                <div>
+                  <p className="text-xs text-gray-400">Logo preview</p>
+                  <button type="button"
+                    onClick={() => setForm({ ...form, logoUrl: '' })}
+                    className="text-xs text-red-400 hover:text-red-300 mt-0.5">
+                    Remove
+                  </button>
+                </div>
               </div>
             )}
-            <p className="text-xs text-gray-600 mt-1">
-              Tip: upload the logo to{' '}
+            <p className="text-xs text-gray-600 mt-2">
+              Upload your logo to{' '}
               <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer"
                 className="text-primary hover:underline">imgbb.com</a>
-              {' '}(free) and paste the direct image URL here.
+              {' '}(free) → copy the direct image link → paste here.
             </p>
           </div>
 
-          <div className="grid grid-cols-4 gap-6">
-            {/* Icon */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Icon (Emoji)</label>
-              <input type="text" value={form.icon} placeholder="📁"
-                onChange={e => setForm({ ...form, icon: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-center text-2xl" />
-            </div>
+          {/* Color, DA, PA */}
+          <div className="grid grid-cols-3 gap-6">
             {/* Color */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Color</label>
+              <label className="block text-sm text-gray-400 mb-2">Brand Color</label>
               <input type="color" value={form.color}
                 onChange={e => setForm({ ...form, color: e.target.value })}
                 className="w-full h-12 rounded-lg cursor-pointer" />
