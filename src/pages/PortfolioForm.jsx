@@ -65,7 +65,7 @@ export default function PortfolioForm() {
       description: form.description,
       url:         form.url,
       logoUrl:     form.logoUrl,
-      icon:        form.logoUrl, // keep icon in sync for backward compat
+      icon:        form.logoUrl,
       color:       form.color,
       tags:        form.tags.split(',').map(t => t.trim()).filter(Boolean),
       metrics:     { da: parseInt(form.da) || 0, pa: parseInt(form.pa) || 0 },
@@ -109,7 +109,6 @@ export default function PortfolioForm() {
       <form onSubmit={handleSubmit} className="max-w-3xl">
         <div className="glass rounded-xl p-6 space-y-6">
 
-          {/* Client Name */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Client Name *</label>
             <input type="text" value={form.client} required placeholder="e.g., The SuperC"
@@ -117,7 +116,6 @@ export default function PortfolioForm() {
               className="w-full px-4 py-3 rounded-lg" />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Description *</label>
             <textarea value={form.description} required rows={4}
@@ -127,14 +125,12 @@ export default function PortfolioForm() {
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            {/* Website URL */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Website URL</label>
               <input type="url" value={form.url} placeholder="https://example.com"
                 onChange={e => setForm({ ...form, url: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg" />
             </div>
-            {/* Tags */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Tags</label>
               <input type="text" value={form.tags} placeholder="SEO, Meta Ads, Web Dev"
@@ -143,14 +139,12 @@ export default function PortfolioForm() {
             </div>
           </div>
 
-          {/* Client Logo URL */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Client Logo</label>
             <input type="url" value={form.logoUrl}
               placeholder="https://example.com/logo.png"
               onChange={e => setForm({ ...form, logoUrl: e.target.value })}
               className="w-full px-4 py-3 rounded-lg" />
-            {/* Live preview */}
             {form.logoUrl && (
               <div className="mt-3 flex items-center gap-3">
                 <img src={form.logoUrl} alt="logo preview"
@@ -167,30 +161,23 @@ export default function PortfolioForm() {
               </div>
             )}
             <p className="text-xs text-gray-600 mt-2">
-              Upload your logo to{' '}
-              <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:underline">imgbb.com</a>
-              {' '}(free) → copy the direct image link → paste here.
+              Upload logo to imgbb.com (free) and paste the direct image URL here.
             </p>
           </div>
 
-          {/* Color, DA, PA */}
           <div className="grid grid-cols-3 gap-6">
-            {/* Color */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Brand Color</label>
               <input type="color" value={form.color}
                 onChange={e => setForm({ ...form, color: e.target.value })}
                 className="w-full h-12 rounded-lg cursor-pointer" />
             </div>
-            {/* DA */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">DA</label>
               <input type="number" value={form.da} min="0" max="100"
                 onChange={e => setForm({ ...form, da: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg" />
             </div>
-            {/* PA */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">PA</label>
               <input type="number" value={form.pa} min="0" max="100"
@@ -199,7 +186,6 @@ export default function PortfolioForm() {
             </div>
           </div>
 
-          {/* Results */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm text-gray-400">Results / Metrics</label>
@@ -228,7 +214,6 @@ export default function PortfolioForm() {
             </div>
           </div>
 
-          {/* Published */}
           <div className="flex items-center gap-3">
             <input type="checkbox" id="isPublished" checked={form.isPublished}
               onChange={e => setForm({ ...form, isPublished: e.target.checked })}
